@@ -1,0 +1,9 @@
+# Godot-generated cache and export credentials.
+.godot/
+export_credentials.cfg
+
+# Local system files and environment secrets.
+.DS_Store
+.env
+.env.*
+!.env.example

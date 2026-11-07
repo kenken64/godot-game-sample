@@ -1,0 +1,11 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/Splash.gd" id="1_ad0hg"]
+[ext_resource type="Texture2D" path="res://assets/game-physics/images/water-splash.webp" id="2_0ollq"]
+
+[node name="Splash" type="Node2D" unique_id=1653027736]
+script = ExtResource("1_ad0hg")
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=170538790]
+scale = Vector2(0.25, 0.25)
+texture = ExtResource("2_0ollq")

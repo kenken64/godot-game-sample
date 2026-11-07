@@ -1,0 +1,23 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/Hazard.gd" id="1_3h61n"]
+[ext_resource type="Texture2D" path="res://assets/final-game/forest-spikes.png" id="2_wf14v"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_6fylv"]
+size = Vector2(105, 58)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_etcsx"]
+atlas = ExtResource("2_wf14v")
+region = Rect2(58, 56, 1419, 875)
+
+[node name="Hazard" type="Area2D" unique_id=790576365]
+script = ExtResource("1_3h61n")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=2023686209]
+position = Vector2(0, -14)
+shape = SubResource("RectangleShape2D_6fylv")
+
+[node name="SpikeArtwork" type="Sprite2D" parent="." unique_id=246776644]
+position = Vector2(0, -18)
+scale = Vector2(0.075, 0.075)
+texture = SubResource("AtlasTexture_etcsx")

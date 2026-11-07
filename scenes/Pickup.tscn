@@ -1,0 +1,19 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/Pickup.gd" id="1_3bp0e"]
+[ext_resource type="Texture2D" path="res://assets/game-achievement/images/heart-pickup.webp" id="2_axj2u"]
+[ext_resource type="Texture2D" path="res://assets/game-achievement/images/gold-coin.webp" id="3_7gm55"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_j2gyh"]
+size = Vector2(36, 40)
+
+[node name="Pickup" type="Area2D" unique_id=1649507116]
+script = ExtResource("1_3bp0e")
+heart_texture = ExtResource("2_axj2u")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1457149650]
+shape = SubResource("RectangleShape2D_j2gyh")
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=753139952]
+scale = Vector2(0.16, 0.16)
+texture = ExtResource("3_7gm55")
