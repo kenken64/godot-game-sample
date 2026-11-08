@@ -27,7 +27,7 @@ All three presets retain the full starter asset library. Desktop releases are al
 
 ## micro:bit gamepad on macOS
 
-For the tested Bluetooth `micro:bit Gamepad` (`1209:0001`), run `tools/play_microbit_macos.command`. This launcher selects SDL's IOKit input path and registers the controller's two axes and eight button slots before the engine starts. It affects only that launch; it does not change macOS settings or flash the controller. Normal launches continue to use the default controller backend.
+The macOS release package includes the micro:bit launchers, mapping and input checker beside the app. For the tested Bluetooth `micro:bit Gamepad` (`1209:0001`), run `play_microbit_macos.command` from the extracted package, or `tools/play_microbit_macos.command` from this repository. This launcher selects SDL's IOKit input path and registers the controller's two axes and eight button slots before the engine starts. It affects only that launch; it does not change macOS settings or flash the controller. Normal launches continue to use the default controller backend.
 
 Run `tools/check_microbit_macos.command` to inspect live input. **Escape** or the window's close button exits the checker. The checker requires the Godot editor at `/Applications/Godot.app`, or set `GODOT_EDITOR` to its executable; playing the exported game does not require the editor. The four launcher/profile/checker files can also be placed beside `tsg-game-macos.app`; alternatively, set `GODOT_MICROBIT_APP` to the app bundle path.
 

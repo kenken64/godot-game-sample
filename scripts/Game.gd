@@ -1,6 +1,6 @@
 extends Node
 
-const BUILD_ID := "2026.11.08.2"
+const BUILD_ID := "2026.11.08.3"
 const AUDIO_SETTINGS_PATH := "user://audio.cfg"
 var sound_enabled := true
 var sound_volume := 0.8
