@@ -1,0 +1,1 @@
+030018bd091200000100000000010000,micro:bit Gamepad,a:b0,b:b1,x:b2,y:b3,leftshoulder:b4,rightshoulder:b5,leftstick:b6,start:b7,leftx:a0,lefty:a1,

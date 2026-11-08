@@ -25,6 +25,14 @@ The `Linux` preset exports `tsg-game-linux.x86_64` for 64-bit Intel/AMD Linux, w
 
 All three presets retain the full starter asset library. Desktop releases are also packaged as `.tar.xz` archives using lossless compression, with a `.zip` alternative for Windows. Extract the package before launching the game. These archives reduce download size; the extracted files and image quality are unchanged.
 
+## micro:bit gamepad on macOS
+
+For the tested Bluetooth `micro:bit Gamepad` (`1209:0001`), run `tools/play_microbit_macos.command`. This launcher selects SDL's IOKit input path and registers the controller's two axes and eight button slots before the engine starts. It affects only that launch; it does not change macOS settings or flash the controller. Normal launches continue to use the default controller backend.
+
+Run `tools/check_microbit_macos.command` to inspect live input. **Escape** or the window's close button exits the checker. The checker requires the Godot editor at `/Applications/Godot.app`, or set `GODOT_EDITOR` to its executable; playing the exported game does not require the editor. The four launcher/profile/checker files can also be placed beside `tsg-game-macos.app`; alternatively, set `GODOT_MICROBIT_APP` to the app bundle path.
+
+The mapping reserves raw button 6 for stick-click and raw button 7 for Start. In the physical test, 535 Bluetooth HID reports contained axis motion and ordinary button slots 0–5, but no stick-click bit. The controller firmware or switch wiring must supply that event before the game can bind it.
+
 ## Tests and artwork
 
 `tests/smoke_test.gd`, `tests/menu_portal_test.gd`, `tests/menu_gamepad_test.gd`, `tests/menu_gamepad_press_test.gd`, `tests/enemy_impact_test.gd`, `tests/controls_test.gd` and `tests/health_animation_test.gd` can run with Godot's `--headless --path <project> --script res://tests/<name>.gd`. The online tests need a running relay, `FORGE_TEST_RELAY_URL`, and a fresh shared `FORGE_TEST_ROOM_FILE`. Some tests write normal Godot progress data for this sample.
