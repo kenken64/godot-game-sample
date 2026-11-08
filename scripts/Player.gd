@@ -75,7 +75,7 @@ func _physics_process(delta: float) -> void:
         for target in get_tree().get_nodes_in_group("damageable"):
             var gap = target.global_position - global_position
             if absf(gap.x) < 75.0 and absf(gap.y) < 55.0 and gap.x * facing > -10.0:
-                target.hit(1 + Game.attack_bonus)
+                target.hit(1 + Game.attack_bonus, global_position.x)
     move_and_slide()
     var animation = "jump" if not is_on_floor() else ("run" if absf(axis) > 0.1 else "idle")
     if crouching and sprite.sprite_frames and sprite.sprite_frames.has_animation("crouch"):

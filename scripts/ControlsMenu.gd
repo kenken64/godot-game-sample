@@ -1,5 +1,7 @@
 extends Control
 
+signal menu_closed
+
 const GamepadBindings = preload("res://scripts/GamepadBindings.gd")
 const SAVE_PATH := "user://controls.cfg"
 const ACTIONS := {
@@ -47,6 +49,12 @@ func _build_menu() -> void:
     panel.offset_right = -145
     panel.offset_top = 28
     panel.offset_bottom = -28
+    var panel_style := StyleBoxFlat.new()
+    panel_style.bg_color = Color("142b23")
+    panel_style.border_color = Color("8f8652")
+    panel_style.set_border_width_all(1)
+    panel_style.set_corner_radius_all(22)
+    panel.add_theme_stylebox_override("panel", panel_style)
     add_child(panel)
     var margin = MarginContainer.new()
     for side in ["margin_left", "margin_right", "margin_top", "margin_bottom"]:
@@ -58,6 +66,7 @@ func _build_menu() -> void:
     var title = Label.new()
     title.text = "CONTROLS & GAMEPAD"
     title.add_theme_font_size_override("font_size", 26)
+    title.add_theme_color_override("font_color", Color("f4d98b"))
     column.add_child(title)
     var help = Label.new()
     help.text = "Select a binding, then press a key or gamepad button / stick. Esc cancels."
@@ -105,6 +114,17 @@ func _build_menu() -> void:
         pad_buttons[action] = pad
     var footer = HBoxContainer.new()
     column.add_child(footer)
+    var volume_label := Label.new()
+    volume_label.text = "Volume"
+    footer.add_child(volume_label)
+    var volume := HSlider.new()
+    volume.custom_minimum_size.x = 120
+    volume.min_value = 0.0
+    volume.max_value = 1.0
+    volume.step = 0.05
+    volume.value = db_to_linear(AudioServer.get_bus_volume_db(0))
+    volume.value_changed.connect(func(value: float): AudioServer.set_bus_volume_db(0, linear_to_db(maxf(value, 0.001))))
+    footer.add_child(volume)
     var reset = Button.new()
     reset.text = "Restore defaults"
     reset.pressed.connect(_restore_defaults)
@@ -131,6 +151,7 @@ func close_menu() -> void:
     awaiting_kind = ""
     hide()
     get_tree().paused = was_paused
+    menu_closed.emit()
 
 func _begin_capture(action: String, kind: String) -> void:
     awaiting_action = action
@@ -221,7 +242,7 @@ func _refresh() -> void:
 
 func _apply_gamepads() -> void:
     GamepadBindings.set_overrides(pad_overrides)
-    if not level.is_node_ready():
+    if not level.is_node_ready() or not level.has_method("_assign_gamepads"):
         return
     level.p1_pad = -2
     level.p2_pad = -2

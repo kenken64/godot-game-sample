@@ -11,6 +11,7 @@ var sent := false
 var tick := 0.0
 var last_ending := ""
 var last_splash := false
+var connection_status := ""
 @onready var level = get_parent()
 
 func host_room() -> void:
@@ -25,12 +26,22 @@ func _connect(role: String, room_code: String) -> void:
     socket = WebSocketPeer.new()
     pending = role
     join_code = room_code
+    code = ""
+    is_host = false
+    is_client = false
     sent = false
-    socket.connect_to_url(relay_url)
+    connection_status = "Connecting…"
+    var error := socket.connect_to_url(relay_url)
+    if error != OK:
+        connection_status = "Could not connect to the relay."
+        pending = ""
 
 func _process(delta: float) -> void:
     socket.poll()
     if socket.get_ready_state() != WebSocketPeer.STATE_OPEN:
+        if socket.get_ready_state() == WebSocketPeer.STATE_CLOSED and not pending.is_empty():
+            connection_status = "Connection closed. Check the relay or room."
+            pending = ""
         return
     if not sent:
         _send({"type": pending, "code": join_code})
@@ -88,7 +99,7 @@ func _actor(actor) -> Dictionary:
     if not is_instance_valid(actor):
         return {}
     return {"x": actor.global_position.x, "y": actor.global_position.y,
-        "hp": actor.health_points}
+        "hp": actor.health_points, "hit_flash": actor.hit_flash_time > 0.0}
 
 func _actors(parent_name: String) -> Dictionary:
     var result := {}
@@ -107,6 +118,7 @@ func _receive(message: Dictionary) -> void:
     match message.get("type", ""):
         "joined":
             code = str(message.get("code", ""))
+            connection_status = "ROOM  " + code
             is_host = pending == "host"
             is_client = pending == "join"
             if is_client:
@@ -123,6 +135,10 @@ func _receive(message: Dictionary) -> void:
                         area.monitoring = false
                 level.shop.monitoring = false
                 level.exit_area.monitoring = false
+        "error":
+            connection_status = str(message.get("message", "Could not join the room."))
+            pending = ""
+            socket.close()
         "peer_joined":
             level.p2.active = true
             level.p2.show()
@@ -234,4 +250,9 @@ func _sync_actor(actor, data: Dictionary) -> void:
         actor.queue_free()
         return
     actor.global_position = Vector2(float(data.get("x", 0)), float(data.get("y", 0)))
-    actor.health_points = int(data.get("hp", 1))
+    var hp := int(data.get("hp", 1))
+    if actor.has_meta("received_health") and hp < actor.health_points:
+        actor._show_damage_number(actor.health_points - hp)
+    actor.set_meta("received_health", true)
+    actor.health_points = hp
+    actor._set_hit_flash(bool(data.get("hit_flash", false)))

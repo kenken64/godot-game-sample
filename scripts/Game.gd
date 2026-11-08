@@ -1,5 +1,8 @@
 extends Node
 
+var menu_role := ""
+var menu_room := ""
+var menu_relay := ""
 var coins := 0
 var collected := 0
 var score := 0

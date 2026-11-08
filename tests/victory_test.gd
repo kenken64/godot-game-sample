@@ -16,15 +16,12 @@ func run_checks() -> void:
     current_scene = level
     var game = root.get_node("Game")
     await create_timer(0.2).timeout
-    game.collected = 19
-    game.boss_defeated = true
-    level._on_exit(level.p1)
-    check(not level.finished and not level.finale.visible, "exit stays locked before collecting 20 coins")
-    game.collected = 20
+    game.collected = 0
     game.boss_defeated = false
+    level.p1.health = 0
     level._on_exit(level.p1)
-    check(not level.finished, "exit stays locked before defeating the guardian")
-    game.boss_defeated = true
+    check(not level.finished and not level.finale.visible, "a defeated player cannot trigger the portal")
+    level.p1.health = 3
     level._on_exit(level.p1)
     var art = level.get_node("UI/Finale/VictoryArt")
     var title = level.get_node("UI/Finale/VictoryTitle")

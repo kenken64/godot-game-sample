@@ -108,7 +108,7 @@ func run_checks() -> void:
             quit(1)
             return
         await create_timer(1.0).timeout
-        if not level.finale.visible or not level.get_node("UI/Finale/Result").text.begins_with("Game over"):
+        if not level.finale.visible or level.get_node("UI/Finale/VictoryTitle").text != "GAME OVER":
             push_error("Guest did not see the game-over panel")
             quit(1)
             return

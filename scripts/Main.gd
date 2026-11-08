@@ -13,6 +13,7 @@ var game_over := false
 var p1_pad := -2
 var p2_pad := -2
 var system_pad := -2
+var notice_tween: Tween
 
 func _ready() -> void:
     process_mode = Node.PROCESS_MODE_ALWAYS
@@ -30,9 +31,11 @@ func _ready() -> void:
     _assign_gamepads()
     finale.hide()
     _setup_finale()
+    _setup_hud()
+    _connect_menu_room()
     $UI/HUD/ShopPanel.hide()
     exit_area.body_entered.connect(_on_exit)
-    $UI/HUD/ControlsButton.pressed.connect(controls_menu.open_menu)
+    $UI/HUD/ControlsButton.pressed.connect($UI/AdventureMenu.open_menu)
     $UI/HUD/Volume.min_value = 0.0
     $UI/HUD/Volume.max_value = 1.0
     $UI/HUD/Volume.step = 0.05
@@ -46,14 +49,14 @@ func _ready() -> void:
     $UI/HUD/ShopPanel/BuyButton.pressed.connect(func(): _trade("buy"))
     $UI/HUD/ShopPanel/SellButton.pressed.connect(func(): _trade("sell"))
     $UI/HUD/ShopPanel/SalvageButton.pressed.connect(func(): _trade("salvage"))
-    $UI/HUD/Story.text = "The forest relic is missing. Find it beyond the guardian."
+    $UI/HUD/Story.hide()
 
 func _process(_delta: float) -> void:
     _assign_gamepads()
-    if controls_menu.visible:
+    if controls_menu.visible or $UI/AdventureMenu.visible:
         return
-    if Input.is_action_just_pressed("pause"):
-        controls_menu.open_menu()
+    if Input.is_action_just_pressed("pause") and not get_viewport().is_input_handled():
+        $UI/AdventureMenu.open_menu()
         return
     if get_tree().paused:
         return
@@ -99,18 +102,89 @@ func _assign_gamepads() -> void:
         GamepadBindings.bind_system(first)
         system_pad = first
 
+func _setup_hud() -> void:
+    for node_name in ["Backdrop", "Hint", "Achievements", "Leaderboard", "HostButton", "JoinButton", "RoomCode", "Volume"]:
+        get_node("UI/HUD/" + node_name).hide()
+    var hud := $UI/HUD
+    var plate := Panel.new()
+    plate.name = "StatsPlate"
+    plate.position = Vector2(16, 14)
+    plate.size = Vector2(575, 50)
+    plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    plate.add_theme_stylebox_override("panel", _finale_box(Color("142b23"), Color("8f8652"), 1, 14))
+    hud.add_child(plate)
+    hud.move_child(plate, 0)
+    var stats: Label = $UI/HUD/Stats
+    stats.position = Vector2(32, 22)
+    stats.size = Vector2(410, 32)
+    stats.add_theme_font_size_override("font_size", 17)
+    stats.add_theme_color_override("font_color", Color("f4d98b"))
+    $UI/HUD/Player1HealthLabel.position = Vector2(405, 26)
+    $UI/HUD/Player1Health.position = Vector2(438, 29)
+    $UI/HUD/Player1Health.size = Vector2(95, 15)
+    var coop_plate := Panel.new()
+    coop_plate.name = "Player2Plate"
+    coop_plate.position = Vector2(582, 14)
+    coop_plate.size = Vector2(166, 50)
+    coop_plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    coop_plate.add_theme_stylebox_override("panel", _finale_box(Color("142b23"), Color("8f8652"), 1, 14))
+    hud.add_child(coop_plate)
+    hud.move_child(coop_plate, 0)
+    for bar in [$UI/HUD/Player1Health, $UI/HUD/Player2Health]:
+        bar.add_theme_stylebox_override("background", _finale_box(Color("3a3431"), Color("8f8652"), 1, 7))
+        bar.add_theme_stylebox_override("fill", _finale_box(Color("e88985"), Color("e88985"), 0, 7))
+    $UI/HUD/Player2HealthLabel.position = Vector2(595, 26)
+    $UI/HUD/Player2Health.position = Vector2(628, 29)
+    $UI/HUD/Player2Health.size = Vector2(95, 15)
+    var menu_button: Button = $UI/HUD/ControlsButton
+    menu_button.text = "MENU"
+    menu_button.position = Vector2(1120, 16)
+    menu_button.size = Vector2(140, 46)
+    menu_button.add_theme_font_size_override("font_size", 16)
+    menu_button.add_theme_stylebox_override("normal", _finale_box(Color("203b30"), Color("8f8652"), 1, 10))
+    menu_button.add_theme_stylebox_override("hover", _finale_box(Color("315a44"), Color("f7e3a0"), 2, 10))
+    var room := Label.new()
+    room.name = "RoomStatus"
+    room.position = Vector2(32, 73)
+    room.size = Vector2(650, 28)
+    room.add_theme_font_size_override("font_size", 16)
+    room.add_theme_color_override("font_color", Color("f4d98b"))
+    hud.add_child(room)
+    var notice: Label = $UI/HUD/Story
+    notice.position = Vector2(260, 650)
+    notice.size = Vector2(760, 45)
+    notice.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    notice.add_theme_font_size_override("font_size", 20)
+
+func _connect_menu_room() -> void:
+    if Game.menu_role.is_empty():
+        return
+    online.relay_url = Game.menu_relay
+    if Game.menu_role == "host":
+        online.host_room()
+    else:
+        online.join_room(Game.menu_room)
+    Game.menu_role = ""
+
+func _notify(message: String) -> void:
+    var notice: Label = $UI/HUD/Story
+    if notice_tween and notice_tween.is_running():
+        notice_tween.kill()
+    notice.text = message
+    notice.modulate.a = 1.0
+    notice.show()
+    notice_tween = create_tween()
+    notice_tween.tween_interval(3.0)
+    notice_tween.tween_property(notice, "modulate:a", 0.0, 0.6)
+
 func _update_hud() -> void:
-    $UI/HUD/Stats.text = "Coins %d / 20  Wallet %d  Score %d  Materials %d  Blade %s" % [Game.collected, Game.coins, Game.score, Game.materials, "yes" if Game.attack_bonus > 0 else "no"]
+    $UI/HUD/Stats.text = "COINS  %d      SCORE  %d" % [Game.coins, Game.score]
     $UI/HUD/Player1Health.value = p1.health
     $UI/HUD/Player2Health.value = p2.health
     $UI/HUD/Player2Health.visible = p2.active
     $UI/HUD/Player2HealthLabel.visible = p2.active
-    $UI/HUD/Hint.text = "Press jump twice for a double jump. Controls: change keys or gamepad. Boss: %s  Room: %s" % ["done" if Game.boss_defeated else "alive", online.code]
-    $UI/HUD/Achievements.text = "Badges: " + ", ".join(Game.achievements.keys())
-    var lines := []
-    for record in Game.records:
-        lines.append("%d (%s)" % [record["score"], record["ending"]])
-    $UI/HUD/Leaderboard.text = "Top runs: " + ", ".join(lines)
+    $UI/HUD/Player2Plate.visible = p2.active
+    $UI/HUD/RoomStatus.text = online.connection_status
 
 func _shop_player():
     for body in shop.get_overlapping_bodies():
@@ -131,7 +205,7 @@ func _trade(action: String, player = null) -> void:
         "buy": success = Game.buy_gear()
         "sell": success = Game.sell_gear()
         "salvage": success = Game.salvage_gear()
-    $UI/HUD/Story.text = "%s %s. Gear: %s. Materials: %d" % [action.capitalize(), "complete" if success else "unavailable", ", ".join(Game.inventory), Game.materials]
+    _notify("%s %s. Gear: %s. Materials: %d" % [action.capitalize(), "complete" if success else "unavailable", ", ".join(Game.inventory), Game.materials])
 
 # Set up a consistent full-screen result overlay for victory and defeat.
 func _setup_finale() -> void:
@@ -176,6 +250,8 @@ func _setup_finale() -> void:
         button.add_theme_font_size_override("font_size", 18)
         button.add_theme_color_override("font_color", Color("1a2c20") if primary else Color("edf1df"))
         button.add_theme_color_override("font_hover_color", Color("1a2c20") if primary else Color.WHITE)
+        button.add_theme_color_override("font_focus_color", Color("1a2c20") if primary else Color("edf1df"))
+        button.add_theme_color_override("font_pressed_color", Color("1a2c20") if primary else Color.WHITE)
         button.add_theme_stylebox_override("normal", _finale_box(Color("e5c86e") if primary else Color("203b30"), Color("e5c86e") if primary else Color("668671"), 1, 10))
         button.add_theme_stylebox_override("hover", _finale_box(Color("f4dc8f") if primary else Color("315a44"), Color("f7e3a0"), 2, 10))
         button.add_theme_stylebox_override("pressed", _finale_box(Color("c6a84f") if primary else Color("142b23"), Color("f7e3a0"), 2, 10))
@@ -201,10 +277,7 @@ func _finale_box(fill: Color, border: Color, border_width: int, radius: int) -> 
     return box
 
 func _on_exit(body) -> void:
-    if finished or not body.is_in_group("heroes") or not body.active:
-        return
-    if Game.collected < 20 or not Game.boss_defeated:
-        $UI/HUD/Story.text = "The exit needs 20 coins and the defeated guardian."
+    if finished or not body.is_in_group("heroes") or not body.active or body.health <= 0:
         return
     finished = true
     p1.active = false
@@ -226,13 +299,15 @@ func _show_result(message: String, choices: bool, passed: bool = false) -> void:
         create_tween().tween_property(finale, "modulate:a", 1.0, 0.35)
     art.visible = passed
     $UI/Finale/DefeatIcon.visible = not passed and game_over
-    $UI/Finale/Score.text = "COINS  %d / 20       SCORE  %d" % [Game.collected, Game.score]
+    $UI/Finale/Score.text = "COINS  %d       SCORE  %d" % [Game.collected, Game.score]
     title.add_theme_color_override("font_color", Color("f4d98b") if passed else Color("f3b0a3"))
     title.text = "LEVEL PASSED!" if passed else ("GAME OVER" if game_over else "RESULT")
     title.show()
     $UI/Finale/Result.text = message
     $UI/Finale/KeepButton.visible = choices
     $UI/Finale/ReturnButton.visible = choices
+    _place_finale_control($UI/Finale/RestartButton, Rect2(-155, 145 if choices else 82, 310, 56))
+    $UI/Finale/RestartButton.grab_focus()
     $UI/Finale/Credits.text = ""
     if passed and not already_celebrating:
         art.pivot_offset = art.size / 2.0
@@ -260,7 +335,7 @@ func _choose(choice: String) -> void:
     var result_label: Label = $UI/Finale/Result
     result_label.modulate.a = 0.0
     create_tween().tween_property(result_label, "modulate:a", 1.0, 1.0)
-    $UI/Finale/Score.text = "COINS  %d / 20       SCORE  %d" % [Game.collected, Game.score]
+    $UI/Finale/Score.text = "COINS  %d       SCORE  %d" % [Game.collected, Game.score]
     var roll: Label = $UI/Finale/Credits
     roll.text = "CREDITS\nDesign: your name  ·  Art: credited lesson assets\nBuilt with Godot"
     roll.modulate.a = 0.0

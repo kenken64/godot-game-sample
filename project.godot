@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="Godot Forge: The Sleeping Grove"
-run/main_scene="res://scenes/Main.tscn"
+run/main_scene="res://scenes/StartMenu.tscn"
 config/features=PackedStringArray("4.7")
 
 [autoload]
@@ -22,6 +22,7 @@ Game="*res://scripts/Game.gd"
 
 window/size/viewport_width=1280
 window/size/viewport_height=720
+window/size/mode=3
 window/stretch/mode="canvas_items"
 
 [input]

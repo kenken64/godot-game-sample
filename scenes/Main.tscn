@@ -23,6 +23,7 @@
 [ext_resource type="Script" path="res://scripts/ControlsMenu.gd" id="17_ft6cd"]
 
 [ext_resource type="Texture2D" path="res://assets/final-game/victory-crest.png" id="18_victory"]
+[ext_resource type="Script" path="res://scripts/AdventureMenu.gd" id="19_menu"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_yxlcp"]
 size = Vector2(1894, 200)
@@ -610,3 +611,11 @@ visible = false
 layout_mode = 3
 anchors_preset = 0
 script = ExtResource("17_ft6cd")
+
+[node name="AdventureMenu" type="Control" parent="UI"]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("19_menu")
