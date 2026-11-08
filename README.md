@@ -11,7 +11,7 @@ Enemies recoil away from the attacker, flash red and display the damage amount w
 - Player 1: A/D move, W jump (press twice for a double jump), S crouch, Space attack, E roll and F heal at the shop.
 - Player 2: press C to join locally, then use Left/Right to move, Up to jump, Down to crouch, Control to roll, Shift to attack and Enter to heal.
 - Escape or gamepad Start opens the pause menu; R restarts. Change keyboard and gamepad bindings under **Controls**; they are saved to `user://controls.cfg`. **Sound** has a master volume, on/off switch and test cue; settings are saved separately to `user://audio.cfg`. The game generates short cues for key actions.
-- Navigate menus with the D-pad or left stick, confirm with A / Cross, and go back with B / Circle. Start also resumes a paused game. In the binding editor, Escape or Back / Select cancels capture; B / Circle also cancels keyboard capture.
+- Navigate menus with the D-pad or left stick, confirm with A / Cross, and go back with B / Circle. Menu buttons activate when pressed, including while a direction is held. Start also resumes a paused game. In the binding editor, Escape or Back / Select cancels capture; B / Circle also cancels keyboard capture.
 
 ## Online play
 
@@ -27,6 +27,6 @@ All three presets retain the full starter asset library. Desktop releases are al
 
 ## Tests and artwork
 
-`tests/smoke_test.gd`, `tests/menu_portal_test.gd`, `tests/menu_gamepad_test.gd`, `tests/enemy_impact_test.gd`, `tests/controls_test.gd` and `tests/health_animation_test.gd` can run with Godot's `--headless --path <project> --script res://tests/<name>.gd`. The online tests need a running relay, `FORGE_TEST_RELAY_URL`, and a fresh shared `FORGE_TEST_ROOM_FILE`. Some tests write normal Godot progress data for this sample.
+`tests/smoke_test.gd`, `tests/menu_portal_test.gd`, `tests/menu_gamepad_test.gd`, `tests/menu_gamepad_press_test.gd`, `tests/enemy_impact_test.gd`, `tests/controls_test.gd` and `tests/health_animation_test.gd` can run with Godot's `--headless --path <project> --script res://tests/<name>.gd`. The online tests need a running relay, `FORGE_TEST_RELAY_URL`, and a fresh shared `FORGE_TEST_ROOM_FILE`. Some tests write normal Godot progress data for this sample.
 
 Art is grouped by lesson under `assets/`; `asset_catalog.json` records sources. Generated final-game artwork and prompts are in `assets/final-game/`. The accompanying tutorial documents the scene setup and explains how to change these systems.

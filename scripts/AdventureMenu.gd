@@ -93,6 +93,7 @@ func _clear() -> void:
 
 func _button(text: String, action: Callable, primary: bool = false, target: Container = null) -> Button:
     var button := Button.new()
+    button.action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
     button.text = text
     button.custom_minimum_size.y = 48
     button.add_theme_font_size_override("font_size", 18)

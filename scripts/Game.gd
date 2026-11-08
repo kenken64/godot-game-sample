@@ -1,5 +1,6 @@
 extends Node
 
+const BUILD_ID := "2026.11.08.2"
 const AUDIO_SETTINGS_PATH := "user://audio.cfg"
 var sound_enabled := true
 var sound_volume := 0.8
@@ -21,6 +22,7 @@ var records: Array = []
 
 func _ready() -> void:
     process_mode = Node.PROCESS_MODE_ALWAYS
+    get_tree().root.title = "The Sleeping Grove — " + BUILD_ID
     _load_audio_settings()
     if FileAccess.file_exists("user://final_save.json"):
         var data = JSON.parse_string(FileAccess.get_file_as_string("user://final_save.json"))

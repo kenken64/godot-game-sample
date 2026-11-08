@@ -6,6 +6,8 @@ static func configure(rows: Array) -> void:
     for row in rows:
         for control in row:
             control.focus_mode = Control.FOCUS_ALL
+            if control is BaseButton:
+                control.action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
             controls.append(control)
     if controls.is_empty():
         return
