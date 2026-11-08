@@ -81,6 +81,8 @@ static func _apply_override(action: String, device: int) -> void:
 
 static func specs_for(action: String) -> Array:
     if overrides.has(action):
+        if overrides[action].get("type") == "none":
+            return []
         return [overrides[action]]
     var name = action.trim_prefix("p1_").trim_prefix("p2_")
     match name:
@@ -101,6 +103,7 @@ static func describe(action: String) -> String:
         JOY_BUTTON_A:"A / Cross", JOY_BUTTON_B:"B / Circle",
         JOY_BUTTON_X:"X / Square", JOY_BUTTON_Y:"Y / Triangle",
         JOY_BUTTON_BACK:"Back / Select", JOY_BUTTON_START:"Start / Options",
+        JOY_BUTTON_LEFT_STICK:"Left stick click", JOY_BUTTON_RIGHT_STICK:"Right stick click",
         JOY_BUTTON_LEFT_SHOULDER:"Left shoulder", JOY_BUTTON_RIGHT_SHOULDER:"Right shoulder",
         JOY_BUTTON_DPAD_LEFT:"D-pad left", JOY_BUTTON_DPAD_RIGHT:"D-pad right",
         JOY_BUTTON_DPAD_UP:"D-pad up", JOY_BUTTON_DPAD_DOWN:"D-pad down"

@@ -29,7 +29,8 @@ func run_checks() -> void:
     key.pressed = true
     key.physical_keycode = KEY_SPACE
     menu._input(key)
-    check(key_for("p1_left") == KEY_A and menu.awaiting_action == "p1_left", "reject conflicting keyboard key")
+    check(key_for("p1_left") == KEY_SPACE and key_for("p1_attack") == 0 and menu.awaiting_action == "", "replace a conflicting keyboard binding")
+    menu._begin_capture("p1_left", "keyboard")
     key.physical_keycode = KEY_Q
     menu._input(key)
     check(key_for("p1_left") == KEY_Q and menu.awaiting_action == "", "remap keyboard key")
@@ -38,7 +39,8 @@ func run_checks() -> void:
     joy.pressed = true
     joy.button_index = JOY_BUTTON_RIGHT_SHOULDER
     menu._input(joy)
-    check(not menu.pad_overrides.has("p1_jump"), "reject conflicting gamepad button")
+    check(menu.pad_overrides.get("p1_jump", {}).get("button") == JOY_BUTTON_RIGHT_SHOULDER and menu.pad_overrides.get("restart", {}).get("type") == "none", "replace a conflicting gamepad binding")
+    menu._begin_capture("p1_jump", "gamepad")
     joy.button_index = JOY_BUTTON_LEFT_SHOULDER
     menu._input(joy)
     menu._begin_capture("p1_left", "gamepad")

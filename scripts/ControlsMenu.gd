@@ -91,7 +91,7 @@ func _build_menu() -> void:
     title.add_theme_color_override("font_color", Color("f4d98b"))
     column.add_child(title)
     var help := Label.new()
-    help.text = "Choose a binding, then press a key, button or stick. Esc / Select cancels."
+    help.text = "Select a binding to replace it. × or Delete clears; gamepad Y clears a focused binding."
     help.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     help.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     help.add_theme_color_override("font_color", Color("c5d0b5"))
@@ -114,7 +114,7 @@ func _build_menu() -> void:
         if heading_text == "ACTION":
             header.size_flags_horizontal = Control.SIZE_EXPAND_FILL
         else:
-            header.custom_minimum_size.x = 200
+            header.custom_minimum_size.x = 240
             header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
         heading.add_child(header)
     var scroll := ScrollContainer.new()
@@ -142,13 +142,13 @@ func _build_menu() -> void:
         key.custom_minimum_size = Vector2(200, 40)
         _style_button(key)
         key.pressed.connect(_begin_capture.bind(action, "keyboard"))
-        row.add_child(key)
+        _binding_cell(row, key, action, "keyboard")
         key_buttons[action] = key
         var pad := Button.new()
         pad.custom_minimum_size = Vector2(200, 40)
         _style_button(pad)
         pad.pressed.connect(_begin_capture.bind(action, "gamepad"))
-        row.add_child(pad)
+        _binding_cell(row, pad, action, "gamepad")
         pad_buttons[action] = pad
         focus_rows.append([key, pad])
     var footer := HBoxContainer.new()
@@ -172,6 +172,46 @@ func _build_menu() -> void:
     focus_rows.append([reset, close_button])
     MenuNavigation.configure(focus_rows)
 
+func _binding_cell(row: HBoxContainer, binding_button: Button, action: String, kind: String) -> void:
+    var cell := HBoxContainer.new()
+    cell.add_theme_constant_override("separation", 8)
+    row.add_child(cell)
+    cell.add_child(binding_button)
+    var clear := Button.new()
+    clear.name = "Clear_%s_%s" % [action, kind]
+    clear.text = "×"
+    clear.custom_minimum_size = Vector2(32, 40)
+    clear.focus_mode = Control.FOCUS_NONE
+    clear.action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
+    clear.tooltip_text = "Clear %s binding for %s" % [kind, _action_label(action)]
+    _style_button(clear)
+    clear.pressed.connect(_clear_binding.bind(action, kind))
+    cell.add_child(clear)
+
+func _focused_binding() -> Dictionary:
+    var focused := get_viewport().gui_get_focus_owner()
+    for action in ACTIONS.values():
+        if focused == key_buttons[action]:
+            return {"action": action, "kind": "keyboard"}
+        if focused == pad_buttons[action]:
+            return {"action": action, "kind": "gamepad"}
+    return {}
+
+func _clear_binding(action: String, kind: String) -> void:
+    awaiting_action = ""
+    awaiting_kind = ""
+    if kind == "keyboard":
+        _set_keyboard(action, {})
+    else:
+        pad_overrides[action] = {"type": "none"}
+        _apply_gamepads()
+    status.text = "%s %s binding cleared and saved." % [_action_label(action), kind]
+    _save_settings()
+    _refresh()
+    var button: Button = key_buttons[action] if kind == "keyboard" else pad_buttons[action]
+    if button.is_visible_in_tree():
+        button.grab_focus()
+
 func open_menu() -> void:
     if visible:
         return
@@ -191,10 +231,20 @@ func close_menu() -> void:
 func _begin_capture(action: String, kind: String) -> void:
     awaiting_action = action
     awaiting_kind = kind
-    status.text = "Press a %s for %s. Esc / Select cancels." % [kind, _action_label(action)]
+    status.text = "Press a %s for %s. Delete clears; Esc / Select cancels." % [kind, _action_label(action)]
 
 func _input(event: InputEvent) -> void:
-    if not visible or awaiting_action.is_empty():
+    if not visible:
+        return
+    var delete_pressed: bool = event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_DELETE
+    var clear_pad_pressed: bool = awaiting_action.is_empty() and event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_Y
+    if delete_pressed or clear_pad_pressed:
+        var selected := _focused_binding() if awaiting_action.is_empty() else {"action": awaiting_action, "kind": awaiting_kind}
+        if not selected.is_empty():
+            get_viewport().set_input_as_handled()
+            _clear_binding(selected["action"], selected["kind"])
+            return
+    if awaiting_action.is_empty():
         return
     var cancel_capture := event.is_action_pressed("ui_cancel") and (awaiting_kind == "keyboard" or event is InputEventKey)
     if event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_BACK:
@@ -218,16 +268,23 @@ func _input(event: InputEvent) -> void:
             get_viewport().set_input_as_handled()
         return
     get_viewport().set_input_as_handled()
-    var conflict = _find_conflict(awaiting_action, awaiting_kind, binding)
-    if not conflict.is_empty():
-        status.text = "Already used by %s. Try another input, or press Esc / Select to cancel." % conflict
-        return
+    var reassigned := PackedStringArray()
+    for other in _conflicting_actions(awaiting_action, awaiting_kind, binding):
+        if awaiting_kind == "keyboard":
+            _set_keyboard(other, {})
+        else:
+            var remaining := GamepadBindings.specs_for(other).duplicate(true)
+            remaining.erase(binding)
+            pad_overrides[other] = remaining[0] if not remaining.is_empty() else {"type": "none"}
+        reassigned.append(_action_label(other))
     if awaiting_kind == "keyboard":
         _set_keyboard(awaiting_action, binding)
     else:
         pad_overrides[awaiting_action] = binding
         _apply_gamepads()
     status.text = "%s updated and saved." % _action_label(awaiting_action)
+    if not reassigned.is_empty():
+        status.text += " Input reassigned from " + ", ".join(reassigned) + "."
     awaiting_action = ""
     awaiting_kind = ""
     _save_settings()
@@ -250,21 +307,25 @@ func _set_keyboard(action: String, binding: Dictionary) -> void:
     var key = InputEventKey.new()
     key.physical_keycode = int(binding.get("physical", 0))
     key.keycode = int(binding.get("logical", 0))
-    InputMap.action_add_event(action, key)
+    if key.physical_keycode != 0 or key.keycode != 0:
+        InputMap.action_add_event(action, key)
 
-func _find_conflict(action: String, kind: String, binding: Dictionary) -> String:
+func _conflicting_actions(action: String, kind: String, binding: Dictionary) -> Array[String]:
+    var conflicts: Array[String] = []
     for other in ACTIONS.values():
         if other == action:
             continue
         if kind == "keyboard":
             for event in InputMap.action_get_events(other):
                 if event is InputEventKey and _key_spec(event) == binding:
-                    return _action_label(other)
+                    conflicts.append(other)
+                    break
         elif not (action.begins_with("p1_") and other.begins_with("p2_")) and not (action.begins_with("p2_") and other.begins_with("p1_")):
             for existing in GamepadBindings.specs_for(other):
                 if existing == binding:
-                    return _action_label(other)
-    return ""
+                    conflicts.append(other)
+                    break
+    return conflicts
 
 func _action_label(action: String) -> String:
     for label_text in ACTIONS:
@@ -280,6 +341,8 @@ func _refresh() -> void:
                 key_buttons[action].text = event.as_text().replace(" - Physical", "")
                 break
         pad_buttons[action].text = GamepadBindings.describe(action)
+        key_buttons[action].tooltip_text = key_buttons[action].text + " — select to rebind; Delete or Y clears."
+        pad_buttons[action].tooltip_text = pad_buttons[action].text + " — select to rebind; Delete or Y clears."
 
 func _apply_gamepads() -> void:
     GamepadBindings.set_overrides(pad_overrides)
@@ -293,10 +356,12 @@ func _apply_gamepads() -> void:
 func _save_settings() -> void:
     var config = ConfigFile.new()
     for action in ACTIONS.values():
+        var saved_key := {"physical": 0, "logical": 0}
         for event in InputMap.action_get_events(action):
             if event is InputEventKey:
-                config.set_value("keyboard", action, _key_spec(event))
+                saved_key = _key_spec(event)
                 break
+        config.set_value("keyboard", action, saved_key)
         if pad_overrides.has(action):
             config.set_value("gamepad", action, pad_overrides[action])
     var error = config.save(SAVE_PATH)
@@ -308,10 +373,10 @@ func _load_settings() -> void:
     if config.load(SAVE_PATH) == OK:
         for action in ACTIONS.values():
             var key = config.get_value("keyboard", action, {})
-            if key is Dictionary and (int(key.get("physical", 0)) != 0 or int(key.get("logical", 0)) != 0):
+            if key is Dictionary and config.has_section_key("keyboard", action):
                 _set_keyboard(action, key)
             var pad = config.get_value("gamepad", action, {})
-            if pad is Dictionary and pad.get("type", "") in ["button", "axis"]:
+            if pad is Dictionary and pad.get("type", "") in ["button", "axis", "none"]:
                 pad_overrides[action] = pad
     _apply_gamepads()
     _refresh()
