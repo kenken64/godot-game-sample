@@ -82,6 +82,12 @@ func run_checks() -> void:
     controls._begin_capture("p1_roll", "keyboard")
     await tap(remove)
     check(not has_keyboard("p1_roll") and controls.awaiting_action.is_empty(), "Delete also clears while capturing a replacement")
+    controls.key_buttons["p1_interact"].grab_focus()
+    var mac_delete := InputEventKey.new()
+    mac_delete.keycode = KEY_BACKSPACE
+    mac_delete.physical_keycode = KEY_BACKSPACE
+    await tap(mac_delete)
+    check(not has_keyboard("p1_interact"), "the Mac keyboard's backward Delete key also clears a binding")
     controls._begin_capture("p1_attack", "gamepad")
     var axis := InputEventJoypadMotion.new()
     axis.device = 7

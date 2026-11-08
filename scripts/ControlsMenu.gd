@@ -236,7 +236,7 @@ func _begin_capture(action: String, kind: String) -> void:
 func _input(event: InputEvent) -> void:
     if not visible:
         return
-    var delete_pressed: bool = event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_DELETE
+    var delete_pressed: bool = event is InputEventKey and event.pressed and not event.echo and event.keycode in [KEY_DELETE, KEY_BACKSPACE]
     var clear_pad_pressed: bool = awaiting_action.is_empty() and event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_Y
     if delete_pressed or clear_pad_pressed:
         var selected := _focused_binding() if awaiting_action.is_empty() else {"action": awaiting_action, "kind": awaiting_kind}
