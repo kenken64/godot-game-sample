@@ -71,6 +71,8 @@ func _physics_process(delta: float) -> void:
         jumps_used += 1
     sprite.flip_h = facing < 0
     if attack_now and attack_wait <= 0.0:
+        if Game.has_method("play_sound"):
+            Game.play_sound("attack")
         attack_wait = 0.4
         for target in get_tree().get_nodes_in_group("damageable"):
             var gap = target.global_position - global_position
@@ -114,6 +116,8 @@ func hurt() -> void:
     if hurt_wait > 0.0 or health <= 0:
         return
     health -= 1
+    if Game.has_method("play_sound"):
+        Game.play_sound("hurt")
     hurt_wait = 1.0
     if health <= 0:
         _apply_crouch_visual(false)

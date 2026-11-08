@@ -1,6 +1,7 @@
 extends Node2D
 
 const GamepadBindings = preload("res://scripts/GamepadBindings.gd")
+const MenuNavigation = preload("res://scripts/MenuNavigation.gd")
 @onready var p1 = $Player1
 @onready var p2 = $Player2
 @onready var shop: Area2D = $Shop
@@ -36,11 +37,6 @@ func _ready() -> void:
     $UI/HUD/ShopPanel.hide()
     exit_area.body_entered.connect(_on_exit)
     $UI/HUD/ControlsButton.pressed.connect($UI/AdventureMenu.open_menu)
-    $UI/HUD/Volume.min_value = 0.0
-    $UI/HUD/Volume.max_value = 1.0
-    $UI/HUD/Volume.step = 0.05
-    $UI/HUD/Volume.value = 1.0
-    $UI/HUD/Volume.value_changed.connect(_volume_changed)
     $UI/Finale/KeepButton.pressed.connect(func(): _choose("keep"))
     $UI/Finale/ReturnButton.pressed.connect(func(): _choose("return"))
     $UI/Finale/RestartButton.pressed.connect(_restart)
@@ -103,7 +99,7 @@ func _assign_gamepads() -> void:
         system_pad = first
 
 func _setup_hud() -> void:
-    for node_name in ["Backdrop", "Hint", "Achievements", "Leaderboard", "HostButton", "JoinButton", "RoomCode", "Volume"]:
+    for node_name in ["Backdrop", "Hint", "Achievements", "Leaderboard", "HostButton", "JoinButton", "RoomCode"]:
         get_node("UI/HUD/" + node_name).hide()
     var hud := $UI/HUD
     var plate := Panel.new()
@@ -286,6 +282,7 @@ func _on_exit(body) -> void:
 
 func _game_over_after_animation() -> void:
     await get_tree().create_timer(0.9).timeout
+    Game.play_sound("defeat")
     _show_result("Your adventure is not over. Try again!", false)
 
 func _show_result(message: String, choices: bool, passed: bool = false) -> void:
@@ -307,9 +304,14 @@ func _show_result(message: String, choices: bool, passed: bool = false) -> void:
     $UI/Finale/KeepButton.visible = choices
     $UI/Finale/ReturnButton.visible = choices
     _place_finale_control($UI/Finale/RestartButton, Rect2(-155, 145 if choices else 82, 310, 56))
+    var focus_rows: Array = [[$UI/Finale/RestartButton]]
+    if choices:
+        focus_rows.push_front([$UI/Finale/KeepButton, $UI/Finale/ReturnButton])
+    MenuNavigation.configure(focus_rows)
     $UI/Finale/RestartButton.grab_focus()
     $UI/Finale/Credits.text = ""
     if passed and not already_celebrating:
+        Game.play_sound("victory")
         art.pivot_offset = art.size / 2.0
         art.scale = Vector2(0.35, 0.35)
         art.rotation = -0.25
@@ -332,6 +334,8 @@ func _choose(choice: String) -> void:
     $UI/Finale/Result.text = "You chose to %s the relic. Final score: %d" % [choice, Game.score]
     $UI/Finale/KeepButton.hide()
     $UI/Finale/ReturnButton.hide()
+    MenuNavigation.configure([[$UI/Finale/RestartButton]])
+    $UI/Finale/RestartButton.grab_focus()
     var result_label: Label = $UI/Finale/Result
     result_label.modulate.a = 0.0
     create_tween().tween_property(result_label, "modulate:a", 1.0, 1.0)
@@ -340,9 +344,6 @@ func _choose(choice: String) -> void:
     roll.text = "CREDITS\nDesign: your name  ·  Art: credited lesson assets\nBuilt with Godot"
     roll.modulate.a = 0.0
     create_tween().tween_property(roll, "modulate:a", 1.0, 1.0)
-
-func _volume_changed(value: float) -> void:
-    AudioServer.set_bus_volume_db(0, linear_to_db(maxf(value, 0.001)))
 
 func _restart() -> void:
     get_tree().paused = false

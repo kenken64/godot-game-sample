@@ -253,6 +253,7 @@ func _sync_actor(actor, data: Dictionary) -> void:
     var hp := int(data.get("hp", 1))
     if actor.has_meta("received_health") and hp < actor.health_points:
         actor._show_damage_number(actor.health_points - hp)
+        Game.play_sound("enemy_hit")
     actor.set_meta("received_health", true)
     actor.health_points = hp
     actor._set_hit_flash(bool(data.get("hit_flash", false)))

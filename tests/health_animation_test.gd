@@ -31,5 +31,7 @@ func run_checks() -> void:
     check(level.finished and not level.finale.visible, "death animation remains visible before game over")
     await create_timer(0.9).timeout
     check(level.finale.visible and level.get_node("UI/HUD/Player1Health").value == 0, "game over follows death animation and health bar is empty")
+    # Allow the short game-over cue to finish before the headless test exits.
+    await create_timer(0.4).timeout
     print("Health and animation checks: ", "passed" if failures == 0 else "failed")
     quit(1 if failures else 0)

@@ -3,6 +3,7 @@ extends Control
 signal menu_closed
 
 const GamepadBindings = preload("res://scripts/GamepadBindings.gd")
+const MenuNavigation = preload("res://scripts/MenuNavigation.gd")
 const SAVE_PATH := "user://controls.cfg"
 const ACTIONS := {
     "P1 • Move left":"p1_left", "P1 • Move right":"p1_right",
@@ -38,104 +39,138 @@ func _ready() -> void:
     _load_settings()
     hide()
 
+func _menu_box(fill: Color, border: Color, radius: int = 10) -> StyleBoxFlat:
+    var box := StyleBoxFlat.new()
+    box.bg_color = fill
+    box.border_color = border
+    box.set_border_width_all(1)
+    box.set_corner_radius_all(radius)
+    return box
+
+func _style_button(button: Button, primary: bool = false) -> void:
+    button.add_theme_font_size_override("font_size", 15)
+    button.add_theme_color_override("font_color", Color("1a2c20") if primary else Color("edf1df"))
+    button.add_theme_color_override("font_focus_color", Color("1a2c20") if primary else Color("edf1df"))
+    button.add_theme_color_override("font_hover_color", Color("1a2c20") if primary else Color.WHITE)
+    button.add_theme_color_override("font_pressed_color", Color("1a2c20") if primary else Color.WHITE)
+    button.add_theme_stylebox_override("normal", _menu_box(Color("e5c86e") if primary else Color("203b30"), Color("e5c86e") if primary else Color("526e5e")))
+    button.add_theme_stylebox_override("hover", _menu_box(Color("f4dc8f") if primary else Color("315a44"), Color("f7e3a0")))
+    button.add_theme_stylebox_override("focus", _menu_box(Color(0, 0, 0, 0), Color("fff1b4")))
+    button.add_theme_stylebox_override("pressed", _menu_box(Color("c6aa5f") if primary else Color("142b23"), Color("f7e3a0")))
+
 func _build_menu() -> void:
-    var dim = ColorRect.new()
-    dim.color = Color(0.02, 0.07, 0.05, 0.92)
+    var dim := ColorRect.new()
+    dim.color = Color(0.015, 0.035, 0.03, 0.88)
     dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     add_child(dim)
-    var panel = PanelContainer.new()
-    panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-    panel.offset_left = 145
-    panel.offset_right = -145
-    panel.offset_top = 28
-    panel.offset_bottom = -28
-    var panel_style := StyleBoxFlat.new()
-    panel_style.bg_color = Color("142b23")
-    panel_style.border_color = Color("8f8652")
-    panel_style.set_border_width_all(1)
-    panel_style.set_corner_radius_all(22)
-    panel.add_theme_stylebox_override("panel", panel_style)
+    var panel := PanelContainer.new()
+    panel.set_anchors_preset(Control.PRESET_CENTER)
+    panel.offset_left = -460
+    panel.offset_right = 460
+    panel.offset_top = -325
+    panel.offset_bottom = 325
+    panel.add_theme_stylebox_override("panel", _menu_box(Color("142b23"), Color("8f8652"), 22))
     add_child(panel)
-    var margin = MarginContainer.new()
+    var margin := MarginContainer.new()
     for side in ["margin_left", "margin_right", "margin_top", "margin_bottom"]:
-        margin.add_theme_constant_override(side, 18)
+        margin.add_theme_constant_override(side, 26)
     panel.add_child(margin)
-    var column = VBoxContainer.new()
-    column.add_theme_constant_override("separation", 8)
+    var column := VBoxContainer.new()
+    column.add_theme_constant_override("separation", 10)
     margin.add_child(column)
-    var title = Label.new()
+    var eyebrow := Label.new()
+    eyebrow.text = "T H E   S L E E P I N G   G R O V E"
+    eyebrow.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    eyebrow.add_theme_font_size_override("font_size", 12)
+    eyebrow.add_theme_color_override("font_color", Color("b7c5ad"))
+    column.add_child(eyebrow)
+    var title := Label.new()
     title.text = "CONTROLS & GAMEPAD"
-    title.add_theme_font_size_override("font_size", 26)
+    title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    title.add_theme_font_size_override("font_size", 30)
     title.add_theme_color_override("font_color", Color("f4d98b"))
     column.add_child(title)
-    var help = Label.new()
-    help.text = "Select a binding, then press a key or gamepad button / stick. Esc cancels."
+    var help := Label.new()
+    help.text = "Choose a binding, then press a key, button or stick. Esc / Select cancels."
+    help.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     help.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    help.add_theme_color_override("font_color", Color("c5d0b5"))
     column.add_child(help)
     status = Label.new()
-    status.text = "Changes save on this device. Pause opens this menu."
+    status.text = "Your controls are saved on this device."
+    status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    status.add_theme_font_size_override("font_size", 13)
+    status.add_theme_color_override("font_color", Color("b7c5ad"))
     status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     column.add_child(status)
-    var heading = HBoxContainer.new()
+    var heading := HBoxContainer.new()
+    heading.add_theme_constant_override("separation", 8)
     column.add_child(heading)
     for heading_text in ["ACTION", "KEYBOARD", "GAMEPAD"]:
-        var header = Label.new()
+        var header := Label.new()
         header.text = heading_text
+        header.add_theme_font_size_override("font_size", 12)
+        header.add_theme_color_override("font_color", Color("c5d0b5"))
         if heading_text == "ACTION":
             header.size_flags_horizontal = Control.SIZE_EXPAND_FILL
         else:
-            header.custom_minimum_size.x = 230
+            header.custom_minimum_size.x = 200
             header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
         heading.add_child(header)
-    var scroll = ScrollContainer.new()
+    var scroll := ScrollContainer.new()
     scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
     scroll.follow_focus = true
+    scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
     column.add_child(scroll)
-    var rows = VBoxContainer.new()
+    var rows := VBoxContainer.new()
     rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    rows.add_theme_constant_override("separation", 6)
     scroll.add_child(rows)
+    var focus_rows: Array = []
     for label_text in ACTIONS:
         var action: String = ACTIONS[label_text]
-        var row = HBoxContainer.new()
+        var row := HBoxContainer.new()
+        row.add_theme_constant_override("separation", 8)
         rows.add_child(row)
-        var action_label = Label.new()
+        var action_label := Label.new()
         action_label.text = label_text
         action_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        action_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+        action_label.add_theme_font_size_override("font_size", 15)
         row.add_child(action_label)
-        var key = Button.new()
-        key.custom_minimum_size = Vector2(230, 34)
+        var key := Button.new()
+        key.custom_minimum_size = Vector2(200, 40)
+        _style_button(key)
         key.pressed.connect(_begin_capture.bind(action, "keyboard"))
         row.add_child(key)
         key_buttons[action] = key
-        var pad = Button.new()
-        pad.custom_minimum_size = Vector2(230, 34)
+        var pad := Button.new()
+        pad.custom_minimum_size = Vector2(200, 40)
+        _style_button(pad)
         pad.pressed.connect(_begin_capture.bind(action, "gamepad"))
         row.add_child(pad)
         pad_buttons[action] = pad
-    var footer = HBoxContainer.new()
+        focus_rows.append([key, pad])
+    var footer := HBoxContainer.new()
+    footer.add_theme_constant_override("separation", 12)
     column.add_child(footer)
-    var volume_label := Label.new()
-    volume_label.text = "Volume"
-    footer.add_child(volume_label)
-    var volume := HSlider.new()
-    volume.custom_minimum_size.x = 120
-    volume.min_value = 0.0
-    volume.max_value = 1.0
-    volume.step = 0.05
-    volume.value = db_to_linear(AudioServer.get_bus_volume_db(0))
-    volume.value_changed.connect(func(value: float): AudioServer.set_bus_volume_db(0, linear_to_db(maxf(value, 0.001))))
-    footer.add_child(volume)
-    var reset = Button.new()
-    reset.text = "Restore defaults"
+    var reset := Button.new()
+    reset.text = "RESTORE DEFAULTS"
+    reset.custom_minimum_size = Vector2(200, 44)
+    _style_button(reset)
     reset.pressed.connect(_restore_defaults)
     footer.add_child(reset)
-    var spacer = Control.new()
+    var spacer := Control.new()
     spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     footer.add_child(spacer)
     close_button = Button.new()
-    close_button.text = "Close / Resume"
+    close_button.text = "BACK"
+    close_button.custom_minimum_size = Vector2(200, 44)
+    _style_button(close_button, true)
     close_button.pressed.connect(close_menu)
     footer.add_child(close_button)
+    focus_rows.append([reset, close_button])
+    MenuNavigation.configure(focus_rows)
 
 func open_menu() -> void:
     if visible:
@@ -156,12 +191,15 @@ func close_menu() -> void:
 func _begin_capture(action: String, kind: String) -> void:
     awaiting_action = action
     awaiting_kind = kind
-    status.text = "Press a %s for %s. Escape cancels." % [kind, _action_label(action)]
+    status.text = "Press a %s for %s. Esc / Select cancels." % [kind, _action_label(action)]
 
 func _input(event: InputEvent) -> void:
     if not visible or awaiting_action.is_empty():
         return
-    if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
+    var cancel_capture := event.is_action_pressed("ui_cancel") and (awaiting_kind == "keyboard" or event is InputEventKey)
+    if event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_BACK:
+        cancel_capture = true
+    if cancel_capture:
         awaiting_action = ""
         awaiting_kind = ""
         status.text = "Binding cancelled."
@@ -175,11 +213,14 @@ func _input(event: InputEvent) -> void:
     elif awaiting_kind == "gamepad" and event is InputEventJoypadMotion and absf(event.axis_value) >= 0.75:
         binding = {"type":"axis", "axis":event.axis, "direction":1.0 if event.axis_value > 0 else -1.0}
     if binding.is_empty():
+        # Keep navigation from moving focus while a binding is being captured.
+        if event is InputEventKey or event is InputEventJoypadButton or event is InputEventJoypadMotion:
+            get_viewport().set_input_as_handled()
         return
     get_viewport().set_input_as_handled()
     var conflict = _find_conflict(awaiting_action, awaiting_kind, binding)
     if not conflict.is_empty():
-        status.text = "Already used by %s. Try another input, or press Escape to cancel." % conflict
+        status.text = "Already used by %s. Try another input, or press Esc / Select to cancel." % conflict
         return
     if awaiting_kind == "keyboard":
         _set_keyboard(awaiting_action, binding)
@@ -193,7 +234,7 @@ func _input(event: InputEvent) -> void:
     _refresh()
 
 func _unhandled_input(event: InputEvent) -> void:
-    if visible and awaiting_action.is_empty() and event.is_action_pressed("ui_cancel"):
+    if visible and awaiting_action.is_empty() and (event.is_action_pressed("ui_cancel") or event.is_action_pressed("pause")):
         get_viewport().set_input_as_handled()
         close_menu()
 

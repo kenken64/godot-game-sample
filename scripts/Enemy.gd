@@ -70,6 +70,7 @@ func hit(amount: int = 1, attacker_x: float = INF) -> void:
     if defeated or amount <= 0:
         return
     health_points -= amount
+    Game.play_sound("enemy_hit")
     hit_flash_time = 0.24
     knockback_time = 0.20
     var away := signf(global_position.x - attacker_x) if is_finite(attacker_x) else -direction

@@ -1,5 +1,9 @@
 extends Node
 
+const AUDIO_SETTINGS_PATH := "user://audio.cfg"
+var sound_enabled := true
+var sound_volume := 0.8
+
 var menu_role := ""
 var menu_room := ""
 var menu_relay := ""
@@ -16,11 +20,85 @@ var achievements: Dictionary = {}
 var records: Array = []
 
 func _ready() -> void:
+    process_mode = Node.PROCESS_MODE_ALWAYS
+    _load_audio_settings()
     if FileAccess.file_exists("user://final_save.json"):
         var data = JSON.parse_string(FileAccess.get_file_as_string("user://final_save.json"))
         if data is Dictionary:
             achievements = data.get("achievements", {})
             records = data.get("records", [])
+
+func _exit_tree() -> void:
+    for child in get_children():
+        if child is AudioStreamPlayer:
+            child.stop()
+            child.stream = null
+
+func _load_audio_settings() -> void:
+    var config := ConfigFile.new()
+    if config.load(AUDIO_SETTINGS_PATH) == OK:
+        sound_enabled = bool(config.get_value("audio", "enabled", true))
+        sound_volume = clampf(float(config.get_value("audio", "volume", 0.8)), 0.0, 1.0)
+    _apply_audio_settings()
+
+func set_sound_enabled(enabled: bool) -> void:
+    sound_enabled = enabled
+    _apply_audio_settings()
+    _save_audio_settings()
+
+func set_sound_volume(volume: float) -> void:
+    sound_volume = clampf(volume, 0.0, 1.0)
+    _apply_audio_settings()
+    _save_audio_settings()
+
+func _apply_audio_settings() -> void:
+    AudioServer.set_bus_volume_linear(0, sound_volume)
+    AudioServer.set_bus_mute(0, not sound_enabled)
+
+func _save_audio_settings() -> void:
+    var config := ConfigFile.new()
+    config.set_value("audio", "enabled", sound_enabled)
+    config.set_value("audio", "volume", sound_volume)
+    var error := config.save(AUDIO_SETTINGS_PATH)
+    if error != OK:
+        push_warning("Could not save audio settings (error %d)." % error)
+
+# Small synthesized cues need no external audio files and use the Master bus.
+func play_sound(kind: String) -> void:
+    if not sound_enabled or sound_volume <= 0.0:
+        return
+    var frequency := 440.0
+    var duration := 0.12
+    match kind:
+        "coin": frequency = 660.0
+        "attack": frequency = 260.0
+        "enemy_hit": frequency = 340.0
+        "hurt": frequency = 185.0
+        "victory":
+            frequency = 520.0
+            duration = 0.28
+        "defeat":
+            frequency = 160.0
+            duration = 0.24
+    var rate := 22050
+    var count := int(rate * duration)
+    var data := PackedByteArray()
+    data.resize(count * 2)
+    for i in range(count):
+        var t := float(i) / float(rate)
+        var envelope := minf(t / 0.01, 1.0) * pow(1.0 - t / duration, 2.0)
+        var wave := sin(TAU * frequency * t) + 0.25 * sin(TAU * frequency * 1.5 * t)
+        data.encode_s16(i * 2, int(clampf(wave * envelope * 0.22, -1.0, 1.0) * 32767.0))
+    var stream := AudioStreamWAV.new()
+    stream.format = AudioStreamWAV.FORMAT_16_BITS
+    stream.mix_rate = rate
+    stream.data = data
+    var player := AudioStreamPlayer.new()
+    player.process_mode = Node.PROCESS_MODE_ALWAYS
+    player.stream = stream
+    player.finished.connect(player.queue_free)
+    add_child(player)
+    player.play()
 
 func start_run() -> void:
     coins = 0
@@ -38,6 +116,7 @@ func next_pickup_name() -> String:
     return "Bonus_%d" % spawn_index
 
 func collect_coin() -> void:
+    play_sound("coin")
     coins += 1
     collected += 1
     score += 10

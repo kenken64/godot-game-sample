@@ -13,6 +13,8 @@ var relay_field: LineEdit
 var status: Label
 var is_game := false
 var page := "home"
+var sound_button: Button
+var volume_value: Label
 
 func _ready() -> void:
     process_mode = Node.PROCESS_MODE_ALWAYS
@@ -89,7 +91,7 @@ func _clear() -> void:
         content.remove_child(child)
         child.queue_free()
 
-func _button(text: String, action: Callable, primary: bool = false) -> Button:
+func _button(text: String, action: Callable, primary: bool = false, target: Container = null) -> Button:
     var button := Button.new()
     button.text = text
     button.custom_minimum_size.y = 48
@@ -102,7 +104,9 @@ func _button(text: String, action: Callable, primary: bool = false) -> Button:
     button.add_theme_stylebox_override("hover", _box(Color("f4dc8f") if primary else Color("315a44"), Color("f7e3a0"), 10))
     button.add_theme_stylebox_override("focus", _box(Color(0, 0, 0, 0), Color("fff1b4"), 10))
     button.pressed.connect(action)
-    content.add_child(button)
+    if target == null:
+        target = content
+    target.add_child(button)
     return button
 
 func _home() -> void:
@@ -111,9 +115,16 @@ func _home() -> void:
     heading.text = "PAUSED" if is_game else "THE SLEEPING GROVE"
     var start = _button("RESUME" if is_game else "START ADVENTURE", _resume if is_game else _start_solo, true)
     _button("MULTIPLAYER", _multiplayer)
-    _button("CONTROLS & GAMEPAD", _controls)
-    _button("PROGRESS & SCORES", _progress)
-    _button("QUIT GAME", _quit)
+    var settings_row := HBoxContainer.new()
+    settings_row.add_theme_constant_override("separation", 10)
+    content.add_child(settings_row)
+    _button("CONTROLS", _controls, false, settings_row).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    _button("SOUND", _audio, false, settings_row).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    var extras_row := HBoxContainer.new()
+    extras_row.add_theme_constant_override("separation", 10)
+    content.add_child(extras_row)
+    _button("PROGRESS & SCORES", _progress, false, extras_row).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    _button("QUIT GAME", _quit, false, extras_row).size_flags_horizontal = Control.SIZE_EXPAND_FILL
     start.grab_focus()
 
 func open_menu() -> void:
@@ -179,6 +190,65 @@ func _multiplayer() -> void:
     _button("BACK", _home)
     relay_field.grab_focus()
 
+func _audio() -> void:
+    _clear()
+    page = "audio"
+    heading.text = "SOUND SETTINGS"
+    var description := Label.new()
+    description.text = "Your audio settings are saved on this device."
+    description.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    description.add_theme_color_override("font_color", Color("c5d0b5"))
+    content.add_child(description)
+    var row := HBoxContainer.new()
+    row.add_theme_constant_override("separation", 12)
+    content.add_child(row)
+    var title := Label.new()
+    title.text = "MASTER VOLUME"
+    title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    title.add_theme_font_size_override("font_size", 14)
+    title.add_theme_color_override("font_color", Color("c5d0b5"))
+    row.add_child(title)
+    volume_value = Label.new()
+    volume_value.add_theme_font_size_override("font_size", 17)
+    volume_value.add_theme_color_override("font_color", Color("f4d98b"))
+    row.add_child(volume_value)
+    var slider := HSlider.new()
+    slider.name = "VolumeSlider"
+    slider.min_value = 0.0
+    slider.max_value = 100.0
+    slider.step = 5.0
+    slider.value = Game.sound_volume * 100.0
+    slider.custom_minimum_size.y = 36
+    slider.add_theme_stylebox_override("slider", _box(Color("203b30"), Color("526e5e"), 7))
+    slider.add_theme_stylebox_override("grabber_area", _box(Color("e5c86e"), Color("e5c86e"), 7))
+    slider.value_changed.connect(_audio_volume_changed)
+    content.add_child(slider)
+    sound_button = _button("", _toggle_sound)
+    sound_button.name = "SoundToggle"
+    sound_button.toggle_mode = true
+    sound_button.add_theme_stylebox_override("pressed", _box(Color("315a44"), Color("e5c86e"), 10))
+    _button("PLAY TEST SOUND", _test_sound)
+    _button("BACK", _home)
+    _update_audio_state()
+    slider.grab_focus()
+
+func _audio_volume_changed(value: float) -> void:
+    Game.set_sound_volume(value / 100.0)
+    _update_audio_state()
+
+func _toggle_sound() -> void:
+    Game.set_sound_enabled(not Game.sound_enabled)
+    _update_audio_state()
+
+func _update_audio_state() -> void:
+    volume_value.text = "%d%%" % roundi(Game.sound_volume * 100.0)
+    sound_button.text = "SOUND: ON" if Game.sound_enabled else "SOUND: OFF"
+    sound_button.set_pressed_no_signal(Game.sound_enabled)
+    sound_button.tooltip_text = "Turn sound off" if Game.sound_enabled else "Turn sound on"
+
+func _test_sound() -> void:
+    Game.play_sound("coin")
+
 func _progress() -> void:
     _clear()
     page = "progress"
@@ -222,7 +292,7 @@ func _connect_room(role: String, code: String = "") -> void:
     get_tree().change_scene_to_file("res://scenes/Main.tscn")
 
 func _unhandled_input(event: InputEvent) -> void:
-    if visible and event.is_action_pressed("ui_cancel"):
+    if visible and (event.is_action_pressed("ui_cancel") or (is_game and event.is_action_pressed("pause"))):
         get_viewport().set_input_as_handled()
         if page != "home":
             _home()
